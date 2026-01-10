@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "SentinelGraph ZTDL",
+  "version": "1.0",
+  "description": "Protects your data from leaking into AI",
+  "permissions": ["storage", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://*.openai.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}

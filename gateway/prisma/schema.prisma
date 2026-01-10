@@ -1,0 +1,36 @@
+// 1. Batana padega ki humein JS client chahiye
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 2. Batana padega ki DB kaunsa hai aur URL kahan hai
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 3. .NET Engine ke liye Table (Exact Name)
+model SecurityPattern {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  regex     String
+  severity  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("SecurityPattern")
+}
+
+// 4. Dashboard/Extension ke liye Table
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  userId       String?
+  originalText String
+  cleanText    String?
+  threats      String?
+  riskLevel    String
+  isSafe       Boolean  @default(true)  // <--- Ye naya column add kiya
+  createdAt    DateTime @default(now())
+
+  @@map("AuditLog")
+}

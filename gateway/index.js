@@ -3,6 +3,7 @@ const axios = require("axios");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
+const ENGINE_BASE_URL = process.env.NET_ENGINE_URL || "http://127.0.0.1:5000";
 
 const typeDefs = gql`
   type ScanResult {
@@ -112,9 +113,9 @@ const resolvers = {
     scanPrompt: async (_, { text }) => {
       try {
         // 1. .NET Analyze Engine ko call
-        const response = await axios.post("http://127.0.0.1:5000/analyze", {
-          text: text,
-        });
+       const response = await axios.post(`${ENGINE_BASE_URL}/analyze`, {
+         text: text,
+       });
 
         const { result, cleanText, threatsFound } = response.data;
 
@@ -146,7 +147,7 @@ const resolvers = {
 
       try {
         // .NET Engine ko naye pattern ki notification bhejna
-        await axios.post("http://localhost:5000/refresh-brain");
+       await axios.post(`${ENGINE_BASE_URL}/refresh-brain`);
       } catch (e) {
         console.error("Brain refresh signal failed, but pattern saved locally.");
       }
@@ -177,7 +178,9 @@ const server = new ApolloServer({
   },
 });
 
-server.listen().then(({ url }) => {
+const PORT = process.env.PORT || 4000;
+
+server.listen({ port: PORT, host: '0.0.0.0' }).then(({ url }) => {
   console.log(`🚀 Sentinel Gateway ready at ${url}`);
 });
 

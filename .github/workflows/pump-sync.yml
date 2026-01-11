@@ -2,8 +2,8 @@ name: Auto Pattern Sync (Pump)
 
 on:
   schedule:
-    - cron: '0 */4 * * *' # Har 4 ghante mein automatically chalega
-  workflow_dispatch:      # Isse aap jab chahe manual button daba kar bhi chala sakte hain
+    - cron: '0 */4 * * *'
+  workflow_dispatch: 
 
 jobs:
   sync-patterns:
@@ -19,12 +19,15 @@ jobs:
           node-version: '18'
 
       - name: Install Dependencies
+        # 'working-directory' batata hai ki commands gateway folder mein chalani hain
+        working-directory: ./gateway 
         run: |
           npm install
           npx prisma generate
 
       - name: Run Pump Script
+        working-directory: ./gateway
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NET_ENGINE_URL: ${{ secrets.NET_ENGINE_URL }}
-        run: node pump.js  # Agar aapki file ka naam pump.js hai toh
+        run: node pump.js

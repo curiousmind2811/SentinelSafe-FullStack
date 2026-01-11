@@ -1,0 +1,30 @@
+name: Auto Pattern Sync (Pump)
+
+on:
+  schedule:
+    - cron: '0 */4 * * *' # Har 4 ghante mein automatically chalega
+  workflow_dispatch:      # Isse aap jab chahe manual button daba kar bhi chala sakte hain
+
+jobs:
+  sync-patterns:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npx prisma generate
+
+      - name: Run Pump Script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NET_ENGINE_URL: ${{ secrets.NET_ENGINE_URL }}
+        run: node pump.js  # Agar aapki file ka naam pump.js hai toh

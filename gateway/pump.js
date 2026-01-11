@@ -90,7 +90,7 @@ async function pumpAll() {
     // Brain Refresh
 
     const ENGINE_URL =
-      process.env.NET_ENGINE_URL || "https://sentinel-engine.onrender.com";
+    process.env.NET_ENGINE_URL || "https://sentinel-engine.onrender.com";
     await axios.post(`${ENGINE_URL}/refresh-brain`);
     console.log("🧠 .NET Brain synchronized!");
   } catch (error) {

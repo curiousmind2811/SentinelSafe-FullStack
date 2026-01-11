@@ -103,6 +103,8 @@ app.MapPost("/analyze", async (ScanRequest request) =>
     });
 });
 
+app.MapGet("/", () => "🚀 Sentinel Engine is Online and Protected!");
+
 app.MapPost("/refresh-brain", async () => {
     await RefreshBrain();
     return Results.Ok("Brain Updated Successfully");

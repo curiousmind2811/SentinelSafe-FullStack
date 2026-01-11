@@ -14,7 +14,9 @@ model SecurityPattern {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   regex     String
-  severity  String
+  severity  String   // CRITICAL, HIGH, MEDIUM, LOW
+  category  String   @default("GENERAL") // SECRET, PII, INJECTION, BYPASS
+  rank      Int      @default(100)       // Lower number = Higher Priority (1 is top)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 

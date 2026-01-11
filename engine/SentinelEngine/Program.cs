@@ -6,7 +6,8 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors();
-builder.Services.ConfigureHttpJsonOptions(options => {
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
     options.SerializerOptions.PropertyNamingPolicy = null; // Ye casing ka jhanjhat khatam kar dega
 });
 var app = builder.Build();
@@ -16,88 +17,83 @@ app.UseCors(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 // Host name ke saath direct port 5432 aur SSL requirements
 string dbConn = "Host=aws-1-ap-southeast-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.xjczolxvlhbmzsyatpvy;Password=SentinelSafe2026;SSL Mode=Require;Trust Server Certificate=true;Pooling=false";
 
-// Brain Memory: Fast access ke liye patterns yahan rahenge
-ConcurrentDictionary<string, Regex> CompiledPatterns = new();
+
+List<SecurityPattern> SortedBrain = new();
 
 // Evolution Logic: DB se patterns load karna
-async Task RefreshBrain() {
-    try {
+async Task RefreshBrain()
+{
+    try
+    {
         using var conn = new NpgsqlConnection(dbConn);
-        var patterns = (await conn.QueryAsync<dynamic>("SELECT name, regex, \"isActive\" FROM \"SecurityPattern\"")).ToList();
-        
-        Console.WriteLine($"[DB] Total patterns found in DB: {patterns.Count}");
+        // "rank" aur "category" bhi select karo
+        var patterns = (await conn.QueryAsync<dynamic>(
+            "SELECT name, regex, rank, category, \"isActive\" FROM \"SecurityPattern\" ORDER BY rank ASC"
+        )).ToList();
 
-        var newPatterns = new ConcurrentDictionary<string, Regex>();
-        int successCount = 0;
-        int failCount = 0;
+        var newBrain = new List<SecurityPattern>();
 
-        foreach (var p in patterns) {
-            // Debug: Check if isActive is actually true
-            if (p.isActive != true) continue; 
-
-            try {
-                var compiled = new Regex(p.regex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                newPatterns.TryAdd((string)p.name, compiled);
-                successCount++;
-            } catch (Exception ex) {
-                // YE SABSE IMPORTANT HAI: Dekhna ki error kya aa raha hai
+        foreach (var p in patterns)
+        {
+            if (p.isActive != true) continue;
+            try
+            {
+                var compiled = new Regex((string)p.regex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                newBrain.Add(new SecurityPattern((string)p.name, compiled, (int)p.rank, (string)p.category));
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine($"⚠️ Invalid Regex [{p.name}]: {ex.Message}");
-                failCount++;
             }
         }
 
-        CompiledPatterns = newPatterns; 
-        Console.WriteLine($"[BRAIN] Final Memory: {successCount} active patterns loaded.");
-    } catch (Exception ex) {
+        SortedBrain = newBrain; // Atomically swap brain
+        Console.WriteLine($"[BRAIN] Loaded {SortedBrain.Count} patterns in Priority Order.");
+    }
+    catch (Exception ex)
+    {
         Console.WriteLine($"❌ DB Error: {ex.Message}");
     }
 }
-
 // Initial learning
 await RefreshBrain();
 
 // API 1: Scan Engine
-app.MapPost("/analyze", async (ScanRequest request) => {
+app.MapPost("/analyze", async (ScanRequest request) =>
+{
     var original = request.text ?? "";
     if (string.IsNullOrWhiteSpace(original)) return Results.Ok(new { result = "SAFE" });
 
-    // 1. Structure Detection
-    var type = PromptStructureHelper.Detect(original);
-    
-    // 2. Intelligence: Targeted Scanning
-    var scanTargets = PromptStructureHelper.ExtractScanTargets(original, type);
-    var findings = new ConcurrentBag<string>();
-
-    // 3. Parallel Sniper Scan
-    // Hum har pattern ko sirf 'targets' par chalayenge, pure kachre par nahi
-    Parallel.ForEach(CompiledPatterns, p => {
-        foreach (var target in scanTargets) {
-            // RegexOptions.Singleline humne RefreshBrain mein set kiya hai
-            if (p.Value.IsMatch(target)) {
-                findings.Add(p.Key);
-                break; 
-            }
-        }
-    });
-
-    // 4. Redaction: Original text par replace maaro
-    var threats = findings.Distinct().ToList();
     var cleanText = original;
-    foreach (var name in threats) {
-        cleanText = CompiledPatterns[name].Replace(cleanText, $"[BLOCK:{name}]");
+    var threats = new List<string>();
+
+    // Priority Sequence Scanning
+    foreach (var pattern in SortedBrain)
+    {
+        // Agar pattern match hota hai
+        if (pattern.CompiledRegex.IsMatch(cleanText))
+        {
+            threats.Add(pattern.Name);
+
+            // SMART REDACTION: Sirf matched value badlo
+            // [BLOCK:CATEGORY] use karo taaki user ko context mile
+            cleanText = pattern.CompiledRegex.Replace(cleanText, $"[BLOCK:{pattern.Category}]");
+
+            // Note: Hum break nahi kar rahe taaki ek hi text mein 
+            // AWS Key aur Injection dono detect ho sakein (Rank-wise)
+        }
     }
 
-    Console.WriteLine($"[ENGINE] Type: {type} | Targets: {scanTargets.Count} | Threats: {threats.Count}");
-
-    return Results.Ok(new { 
-        result = threats.Count > 0 ? "DANGER" : "SAFE", 
-        cleanText, 
-        threatsFound = string.Join(", ", threats) 
+    return Results.Ok(new
+    {
+        result = threats.Count > 0 ? "DANGER" : "SAFE",
+        cleanText,
+        threatsFound = string.Join(", ", threats.Distinct())
     });
 });
-
 // API 2: Webhook to Update Brain (Jab Dashboard se naya pattern aaye)
-app.MapPost("/refresh-brain", async () => {
+app.MapPost("/refresh-brain", async () =>
+{
     await RefreshBrain();
     return Results.Ok("Brain Updated Successfully");
 });
@@ -140,10 +136,12 @@ public static class PromptStructureHelper
             var riskLines = input.Split(new[] { '\n', '\r', ';' }, StringSplitOptions.RemoveEmptyEntries)
                                  .Where(line => line.Contains(":") || line.Contains("=") || line.Contains("\""))
                                  .Select(line => line.Trim());
-            
+
             targets.AddRange(riskLines);
         }
         return targets.Distinct().ToList();
     }
 }
+
+public record SecurityPattern(string Name, Regex CompiledRegex, int Rank, string Category);
 public record ScanRequest(string text);

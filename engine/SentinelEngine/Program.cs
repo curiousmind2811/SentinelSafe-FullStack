@@ -11,7 +11,6 @@ builder.Services.ConfigureHttpJsonOptions(options => {
 });
 var app = builder.Build();
 app.UseCors(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 
 // Port 5432 use karna (Direct Connection)
 // Host name ke saath direct port 5432 aur SSL requirements
@@ -103,7 +102,11 @@ app.MapPost("/refresh-brain", async () => {
     return Results.Ok("Brain Updated Successfully");
 });
 
-app.Run($"http://0.0.0.0:{port}");
+
+// --- YAHAN CHANGE HAI ---
+var finalPort = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+Console.WriteLine($"[STARTING] Sentinel Engine on port {finalPort}...");
+app.Run($"http://0.0.0.0:{finalPort}");
 
 
 public enum PromptType { PlainText, StructuredData, CodeOrConfig }

@@ -42,6 +42,8 @@ const typeDefs = gql`
     regex: String
     severity: String
     isActive: Boolean
+    rank: Int        # <--- Ye add kiya
+    category: String  # <--- Ye add kiya
   }
 
   type Query {
@@ -53,7 +55,12 @@ const typeDefs = gql`
   type Mutation {
     scanPrompt(text: String!): ScanResult
 
-    addPattern(name: String!, regex: String!, severity: String!): Pattern
+    addPattern(
+    name: String!,
+    regex: String!,
+    severity: String!
+    rank: Int,
+    category: String): Pattern
 
     saveAuditLog(
       userId: String!

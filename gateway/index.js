@@ -147,14 +147,19 @@ const resolvers = {
         throw new Error("Backend bridge broken");
       }
     },
-    addPattern: async (_, { name, regex, severity }) => {
+    addPattern: async (_, { name, regex, severity, rank, category }) => {
       const newPattern = await prisma.securityPattern.create({
-        data: { name, regex, severity },
+        data: { 
+          name, 
+          regex, 
+          severity, 
+          rank: rank || 100,             // Default rank agar na diya ho
+          category: category || "GENERAL" // Default category agar na diya ho
+        },
       });
 
       try {
-        // .NET Engine ko naye pattern ki notification bhejna
-       await axios.post(`${ENGINE_BASE_URL}/refresh-brain`);
+        await axios.post(`${ENGINE_BASE_URL}/refresh-brain`);
       } catch (e) {
         console.error("Brain refresh signal failed, but pattern saved locally.");
       }

@@ -31,7 +31,7 @@ The Brain (.NET Engine)
 Cleans data using advanced regex and pattern-matching logic.
 
 # Clone and setup
-git clone https://github.com/YOUR_USERNAME/SentinelGraph.git
+git clone https://github.com/curiousmind2811/SentinelGraph.git
 
 # Start the Wash-Engine
 cd engine && dotnet run
